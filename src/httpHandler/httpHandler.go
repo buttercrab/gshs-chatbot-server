@@ -85,7 +85,7 @@ func LaptopHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(c)
 
 	res := chatBotResponse{
-		Version: "1.0",
+		Version: "2.0",
 		Template: skillTemplate{
 			Outputs: []component{
 				{SimpleText: simpleText{
