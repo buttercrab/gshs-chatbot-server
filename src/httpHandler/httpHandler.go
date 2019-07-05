@@ -1,6 +1,7 @@
 package httpHandler
 
 import (
+	"../apiHandler"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -82,19 +83,47 @@ func LaptopHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(c)
+	id := c.UserRequest.User.Properties.PlusFriendUserKey
+
+	log.Println(id)
+
+	var s []string
+
+	login, user := apiHandler.IsLoggedIn(id)
+
+	if login {
+		err := apiHandler.LaptopApplyRequest(id, user)
+		if err != nil {
+			s = append(s, "에러가 발생했습니다.")
+			s = append(s, "관리자에게 아래 코드를 보여주세요.")
+			s = append(s, err.Error())
+		} else {
+			s = append(s, "노사실 신청을 완료하였습니다.")
+		}
+	} else {
+		s = append(s, "로그인이 필요합니다. 아래 링크를 눌러 로그인을 해주세요")
+		s = append(s, "http://external.gs.hs.kr/external/regChatBot.do?user_key="+id)
+	}
 
 	res := chatBotResponse{
 		Version: "2.0",
 		Template: skillTemplate{
-			Outputs: []component{
-				{SimpleText: simpleText{
-					Text: "Hello, World!",
-				}},
-			},
+			Outputs: ToComponent(s),
 		},
 	}
 
 	w.WriteHeader(200)
 	_ = json.NewEncoder(w).Encode(res)
+}
+
+func ToComponent(s []string) []component {
+	var comp []component
+	for _, i := range s {
+		comp = append(comp, component{
+			SimpleText: simpleText{
+				Text: i,
+			},
+		})
+	}
+	return comp
 }
