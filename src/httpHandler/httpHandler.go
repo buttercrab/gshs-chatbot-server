@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 )
 
 type chatBotJson struct {
@@ -77,33 +78,52 @@ func LaptopHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please send a body", 400)
 		return
 	}
+
 	err := json.NewDecoder(r.Body).Decode(&c)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, "JSON decoding error: "+err.Error(), 400)
 		return
 	}
 
 	id := c.UserRequest.User.Properties.PlusFriendUserKey
-
-	log.Println(id)
+	apiRes, user := apiHandler.GetUserData(id)
 
 	var s []string
+	goodsNo := 0
+	switch user.Etc {
+	case "1":
+		goodsNo = 271
+	case "2":
+		goodsNo = 272
+	case "3":
+		goodsNo = 273
+	}
 
-	login, user := apiHandler.IsLoggedIn(id)
-
-	if login {
-		code, message := apiHandler.LaptopApplyRequest(id, user)
-		if code == "0000" {
-			s = append(s, "오늘 1차시 노사실 신청을 완료하였습니다.")
-			s = append(s, "승인이 나기 전까지는 신청 취소를 할 수 있습니다.")
+	if apiRes.Code == "0000" {
+		log.Println("/laptop name: " + user.UserName + ", id: " + user.UserId + ", key: " + id)
+		apiRes, info := apiHandler.SearchGoodsUse(id, goodsNo)
+		if apiRes.Code != "0000" {
+			s = append(s, "오류가 발생했습니다. 다음 오류 메세제를 관리자에게 보여주세요.")
+			s = append(s, apiRes.Message)
 		} else {
-			s = append(s, "에러가 발생했습니다.")
-			s = append(s, "관리자에게 아래 메세지를 보여주세요.")
-			s = append(s, message)
+			if len(*info) == 0 {
+				start := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 19, 0, 0, 0, time.UTC)
+				end := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 21, 0, 0, 0, time.UTC)
+				apiRes := apiHandler.RequestGoodsUse(id, goodsNo, start, end)
+				if apiRes.Code != "0000" {
+					s = append(s, "오류가 발생했습니다. 다음 오류 메세제를 관리자에게 보여주세요.")
+					s = append(s, apiRes.Message)
+				} else {
+					s = append(s, "오늘 1차시에 노사실 신청을 완료하였습니다.")
+					s = append(s, "승인이 나기 전까지는 취소를 할 수 있습니다.")
+				}
+			} else {
+				s = append(s, "오늘 1차시에 이미 신청이 되어있습니다.")
+			}
 		}
 	} else {
 		s = append(s, "로그인이 필요합니다. 아래 링크를 눌러 로그인을 해주세요")
-		s = append(s, "http://external.gs.hs.kr/external/regChatBot.do?user_key="+id)
+		s = append(s, apiHandler.GetLoginURL(id))
 	}
 
 	res := chatBotResponse{
