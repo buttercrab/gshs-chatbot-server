@@ -1,5 +1,12 @@
 package httpHandler
 
+import (
+	"../apiHandler"
+	"encoding/json"
+	"log"
+	"net/http"
+)
+
 type chatBotJson struct {
 	UserRequest userRequest `json:"userRequest"`
 	Bot         bot         `json:"bot"`
@@ -59,66 +66,65 @@ type simpleText struct {
 	Text string `json:"text"`
 }
 
-//
-//func LaptopHandler(w http.ResponseWriter, r *http.Request) {
-//	if r.Method != "POST" {
-//		http.Error(w, "Invalid method", 400)
-//		return
-//	}
-//
-//	var c chatBotJson
-//	if r.Body == nil {
-//		http.Error(w, "Please send a body", 400)
-//		return
-//	}
-//	err := json.NewDecoder(r.Body).Decode(&c)
-//	if err != nil {
-//		http.Error(w, err.Error(), 400)
-//		return
-//	}
-//
-//	id := c.UserRequest.User.Properties.PlusFriendUserKey
-//
-//	log.Println(id)
-//
-//	var s []string
-//
-//	login, user := apiHandler.IsLoggedIn(id)
-//
-//	if login {
-//		code, message := apiHandler.LaptopApplyRequest(id, user)
-//		if code == "0000" {
-//			s = append(s, "오늘 1차시 노사실 신청을 완료하였습니다.")
-//			s = append(s, "승인이 나기 전까지는 신청 취소를 할 수 있습니다.")
-//		} else {
-//			s = append(s, "에러가 발생했습니다.")
-//			s = append(s, "관리자에게 아래 메세지를 보여주세요.")
-//			s = append(s, message)
-//		}
-//	} else {
-//		s = append(s, "로그인이 필요합니다. 아래 링크를 눌러 로그인을 해주세요")
-//		s = append(s, "http://external.gs.hs.kr/external/regChatBot.do?user_key="+id)
-//	}
-//
-//	res := chatBotResponse{
-//		Version: "2.0",
-//		Template: skillTemplate{
-//			Outputs: ToComponent(s),
-//		},
-//	}
-//
-//	w.WriteHeader(200)
-//	_ = json.NewEncoder(w).Encode(res)
-//}
-//
-//func ToComponent(s []string) []component {
-//	var comp []component
-//	for _, i := range s {
-//		comp = append(comp, component{
-//			SimpleText: simpleText{
-//				Text: i,
-//			},
-//		})
-//	}
-//	return comp
-//}
+func LaptopHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Invalid method", 400)
+		return
+	}
+
+	var c chatBotJson
+	if r.Body == nil {
+		http.Error(w, "Please send a body", 400)
+		return
+	}
+	err := json.NewDecoder(r.Body).Decode(&c)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	id := c.UserRequest.User.Properties.PlusFriendUserKey
+
+	log.Println(id)
+
+	var s []string
+
+	login, user := apiHandler.IsLoggedIn(id)
+
+	if login {
+		code, message := apiHandler.LaptopApplyRequest(id, user)
+		if code == "0000" {
+			s = append(s, "오늘 1차시 노사실 신청을 완료하였습니다.")
+			s = append(s, "승인이 나기 전까지는 신청 취소를 할 수 있습니다.")
+		} else {
+			s = append(s, "에러가 발생했습니다.")
+			s = append(s, "관리자에게 아래 메세지를 보여주세요.")
+			s = append(s, message)
+		}
+	} else {
+		s = append(s, "로그인이 필요합니다. 아래 링크를 눌러 로그인을 해주세요")
+		s = append(s, "http://external.gs.hs.kr/external/regChatBot.do?user_key="+id)
+	}
+
+	res := chatBotResponse{
+		Version: "2.0",
+		Template: skillTemplate{
+			Outputs: ToComponent(s),
+		},
+	}
+
+	w.WriteHeader(200)
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+func ToComponent(s []string) []component {
+	var comp []component
+	for _, i := range s {
+		comp = append(comp, component{
+			SimpleText: simpleText{
+				Text: i,
+			},
+		})
+	}
+	return comp
+}
