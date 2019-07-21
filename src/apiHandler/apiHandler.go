@@ -75,7 +75,8 @@ func ExpireUser(id string) *ApiResponse {
 
 func SearchGoodsUse(id string, goodsNo int) (*ApiResponse, *[]GoodsInform) {
 	res, _ := http.Get("http://external.gs.hs.kr/external/chatbot/goodsUseList.do?user_key=" + id +
-		"&goodsNo=" + strconv.Itoa(goodsNo))
+		"&goodsNo=" + strconv.Itoa(goodsNo) +
+		"&target=P")
 	defer res.Body.Close()
 
 	var t ApiSearchRequest
