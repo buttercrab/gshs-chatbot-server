@@ -50,7 +50,7 @@ type GoodsInform struct {
 }
 
 func GetLoginURL(id string) string {
-	return "http://external.gs.hs.kr/external/regChatBot.do?user_key" + id
+	return "http://external.gs.hs.kr/external/regChatBot.do?user_key=" + id
 }
 
 func GetUserData(id string) (*ApiResponse, *UserData) {
@@ -60,11 +60,18 @@ func GetUserData(id string) (*ApiResponse, *UserData) {
 	var t ApiUserResponse
 	_ = json.NewDecoder(res.Body).Decode(&t)
 
+	if t.Code != "0000" {
+		return &ApiResponse{Code: t.Code, Message: t.Message}, nil
+	}
+
 	return &ApiResponse{Code: t.Code, Message: t.Message}, &t.List[0]
 }
 
-func ExpireUser(id string) *ApiResponse {
-	res, _ := http.Get("http://external.gs.hs.kr/external/chatbot/expireChatBotUser.do?user_key=" + id)
+func ExpireUser(id string, user *UserData) *ApiResponse {
+	res, _ := http.Get("http://external.gs.hs.kr/external/chatbot/expireChatBotUser.do" +
+		"?user_key=" + id +
+		"&userType=" + user.UserType +
+		"&userId=" + user.UserId)
 	defer res.Body.Close()
 
 	var t ApiResponse
@@ -73,10 +80,17 @@ func ExpireUser(id string) *ApiResponse {
 	return &t
 }
 
-func SearchGoodsUse(id string, goodsNo int) (*ApiResponse, *[]GoodsInform) {
-	res, _ := http.Get("http://external.gs.hs.kr/external/chatbot/goodsUseList.do?user_key=" + id +
-		"&goodsNo=" + strconv.Itoa(goodsNo) +
-		"&target=P")
+func SearchGoodsUse(id string, user *UserData, goodsNo int) (*ApiResponse, *[]GoodsInform) {
+	good := ""
+	if goodsNo >= 0 {
+		good = "&goodsNo=" + strconv.Itoa(goodsNo)
+	}
+	res, _ := http.Get("http://external.gs.hs.kr/external/chatbot/goodsUseList.do" +
+		"?user_key=" + id +
+		good +
+		"&target=P" +
+		"&userType=" + user.UserType +
+		"&userId=" + user.UserId)
 	defer res.Body.Close()
 
 	var t ApiSearchRequest
@@ -85,12 +99,16 @@ func SearchGoodsUse(id string, goodsNo int) (*ApiResponse, *[]GoodsInform) {
 	return &ApiResponse{Code: t.Code, Message: t.Message}, &t.List
 }
 
-func RequestGoodsUse(id string, goodsNo int, startDate, endDate time.Time) *ApiResponse {
-	res, _ := http.Get("http://external.gs.hs.kr/external/chatbot/insertGoodsUse.do?user_key=" + id +
+func RequestGoodsUse(id string, user *UserData, goodsNo int, startDate, endDate time.Time) *ApiResponse {
+	res, _ := http.Get("http://external.gs.hs.kr/external/chatbot/insertGoodsUse.do" +
+		"?user_key=" + id +
 		"&goodsNo=" + strconv.Itoa(goodsNo) +
 		"&startDate=" + startDate.Format("200601021504") +
 		"&endDate=" + endDate.Format("200601021504") +
-		"&useTarget=" + "[%EC%B1%97%EB%B4%87]")
+		"&useTarget=" + "[%EC%B1%97%EB%B4%87]" +
+		"&userType=" + user.UserType +
+		"&userId=" + user.UserId)
+
 	defer res.Body.Close()
 
 	var t ApiResponse
@@ -99,9 +117,12 @@ func RequestGoodsUse(id string, goodsNo int, startDate, endDate time.Time) *ApiR
 	return &t
 }
 
-func CancelGoodsUse(id string, goodsUseNo int) *ApiResponse {
-	res, _ := http.Get("http://external.gs.hs.kr/external/chatbot/deleteGoodsUse.do?user_key=" + id +
-		"&goodsUseNo=" + strconv.Itoa(goodsUseNo))
+func CancelGoodsUse(id string, user *UserData, goodsUseNo int) *ApiResponse {
+	res, _ := http.Get("http://external.gs.hs.kr/external/chatbot/deleteGoodsUse.do" +
+		"?user_key=" + id +
+		"&goodsUseNo=" + strconv.Itoa(goodsUseNo) +
+		"&userType=" + user.UserType +
+		"&userId=" + user.UserId)
 	defer res.Body.Close()
 
 	var t ApiResponse
