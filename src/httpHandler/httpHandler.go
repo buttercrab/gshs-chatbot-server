@@ -62,13 +62,26 @@ type skillTemplate struct {
 
 type component struct {
 	SimpleText simpleText `json:"simpleText"`
+	//BasicCard  basicCard  `json:"basicCard"`
 }
 
 type simpleText struct {
 	Text string `json:"text"`
 }
 
-func LaptopHandler(w http.ResponseWriter, r *http.Request) {
+type basicCard struct {
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Buttons     []button `json:"buttons"`
+}
+
+type button struct {
+	Label      string `json:"label"`
+	Action     string `json:"action"`
+	WebLinkUrl string `json:"webLinkUrl"`
+}
+
+func RequestHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid method", 400)
 		return
@@ -86,37 +99,84 @@ func LaptopHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, ok := c.Action.Params["place"]; !ok {
+		http.Error(w, "No `place` param", 400)
+		return
+	}
+
 	id := c.UserRequest.User.Properties.PlusFriendUserKey
 	apiRes, user := apiHandler.GetUserData(id)
+	place := c.Action.Params["place"]
 
 	var s []string
 
 	if apiRes.Code == "0000" {
-		goodsNo := getLaptopNo(user.Etc)
-
-		log.Println("/laptop name: " + user.UserName + ", id: " + user.UserId + ", key: " + id)
-		apiRes, info := apiHandler.SearchGoodsUse(id, user, goodsNo)
-		if apiRes.Code != "0000" {
-			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
-			s = append(s, apiRes.Message)
-		} else {
-			if len(*info) == 0 {
-				start := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 19, 0, 0, 0, time.UTC)
-				end := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 21, 0, 0, 0, time.UTC)
-				apiRes := apiHandler.RequestGoodsUse(id, user, goodsNo, start, end)
-				if apiRes.Code != "0000" {
-					s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
-					s = append(s, apiRes.Message)
-				} else {
-					s = append(s, "오늘 1차시에 노사실 신청을 완료하였습니다.")
-					s = append(s, "승인이 나기 전까지는 취소를 할 수 있습니다.")
-				}
+		log.Println("/request name: " + user.UserName + ", id: " + user.UserId + ", key: " + id)
+		if place == "노사" {
+			goodsNo := getLaptopNo(user.Etc)
+			apiRes, info := apiHandler.SearchGoodsUse(id, user, goodsNo)
+			if apiRes.Code != "0000" {
+				s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
+				s = append(s, apiRes.Message)
 			} else {
-				s = append(s, "오늘 1차시에 이미 신청이 되어있습니다.")
+				if len(*info) == 0 {
+					start := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 19, 0, 0, 0, time.UTC)
+					end := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 21, 0, 0, 0, time.UTC)
+					apiRes := apiHandler.RequestGoodsUse(id, user, goodsNo, start, end)
+					if apiRes.Code != "0000" {
+						s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
+						s = append(s, apiRes.Message)
+					} else {
+						s = append(s, "오늘 1차시에 노사실 신청을 완료하였습니다.")
+						s = append(s, "승인이 나기 전까지는 취소를 할 수 있습니다.")
+					}
+				} else {
+					s = append(s, "오늘 1차시에 이미 신청이 되어있습니다.")
+				}
 			}
+		} else if place == "토학" {
+			//mes, info := getClubStatus(id, user)
+			//if mes != "" {
+			//	s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
+			//	s = append(s, mes)
+			//} else {
+			//	if _, ok := c.Action.Params["no"]; ok {
+			//
+			//	} else {
+			//
+			//	}
+			//}
+		} else {
+			http.Error(w, "Not existing place", 400)
+			return
 		}
 	} else {
-		s = append(s, "로그인이 필요합니다. 아래 링크를 눌러 로그인을 해주세요")
+		//res := chatBotResponse{
+		//	Version: "2.0",
+		//	Template: skillTemplate{
+		//		Outputs: []component{
+		//			{
+		//				BasicCard: basicCard{
+		//					Title: "로그인이 필요합니다.",
+		//					Description: "아래 버튼을 눌러 로그인을 해주세요",
+		//					Buttons: []button{
+		//						{
+		//							Label: "로그인",
+		//							Action: "webLink",
+		//							WebLinkUrl: apiHandler.GetLoginURL(id),
+		//						},
+		//					},
+		//				},
+		//			},
+		//		},
+		//	},
+		//}
+		//
+		//w.WriteHeader(200)
+		//_ = json.NewEncoder(w).Encode(res)
+		//
+		//return
+		s = append(s, "아래 링크를 눌러 로그인을 해주세요. ")
 		s = append(s, apiHandler.GetLoginURL(id))
 	}
 
@@ -177,8 +237,7 @@ func CancelHandler(w http.ResponseWriter, r *http.Request) {
 					for _, v := range *info {
 						start, _ := time.Parse("200601021504", v.StartDate)
 						if start.Format("20060102") == time.Now().Format("20060102") && v.Accept == "N" {
-							apiRes := apiHandler.CancelGoodsUse(id, user, v.GoodsUseNo)
-							log.Println(apiRes)
+							_ = apiHandler.CancelGoodsUse(id, user, v.GoodsUseNo)
 							count++
 						}
 					}
@@ -229,4 +288,16 @@ func getLaptopNo(s string) int {
 		return 273
 	}
 	return -1
+}
+
+func getClubStatus(id string, user *apiHandler.UserData) (string, *[][]apiHandler.GoodsInform) {
+	var res [][]apiHandler.GoodsInform
+	for i := 126; i <= 138; i++ {
+		apiRes, info := apiHandler.SearchGoodsUse(id, user, i)
+		if apiRes.Code != "0000" {
+			return apiRes.Message, nil
+		}
+		res = append(res, *info)
+	}
+	return "", &res
 }
