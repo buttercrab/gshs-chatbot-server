@@ -235,9 +235,10 @@ func CancelHandler(w http.ResponseWriter, r *http.Request) {
 				s = append(s, "신청한 건이 없습니다.")
 			} else {
 				count := 0
+				loc, _ := time.LoadLocation("Asia/Seoul")
 				for _, v := range *info {
 					start, _ := time.Parse("200601021504", v.StartDate)
-					if start.Format("20060102") == time.Now().Format("20060102") && v.Accept == "N" {
+					if start.Format("20060102") == time.Now().In(loc).Format("20060102") && v.Accept == "N" {
 						_ = apiHandler.CancelGoodsUse(id, user, v.GoodsUseNo)
 						count++
 					}
@@ -311,15 +312,17 @@ func getClubNo(s string) int {
 }
 
 func getTime(s string) (time.Time, time.Time) {
+	loc, _ := time.LoadLocation("Asia/Seoul")
+	now := time.Now().In(loc)
 	switch s {
 	case "1차시":
-		return time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 19, 0, 0, 0, time.UTC),
-			time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 21, 0, 0, 0, time.UTC)
+		return time.Date(now.Year(), now.Month(), now.Day(), 19, 0, 0, 0, loc),
+			time.Date(now.Year(), now.Month(), now.Day(), 21, 0, 0, 0, loc)
 	case "2차시":
-		return time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 21, 30, 0, 0, time.UTC),
-			time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 24, 0, 0, 0, time.UTC)
+		return time.Date(now.Year(), now.Month(), now.Day(), 21, 30, 0, 0, loc),
+			time.Date(now.Year(), now.Month(), now.Day(), 24, 0, 0, 0, loc)
 	}
-	return time.Now(), time.Now()
+	return now, now
 }
 
 func getClubStatus(id string, user *apiHandler.UserData) (string, *[][]apiHandler.GoodsInform) {
