@@ -217,46 +217,33 @@ func CancelHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := c.Action.Params["place"]; !ok {
-		http.Error(w, "No `place` param", 400)
-		return
-	}
-
 	id := c.UserRequest.User.Properties.PlusFriendUserKey
 	apiRes, user := apiHandler.GetUserData(id)
-	place := c.Action.Params["place"]
 
 	var s []string
 
 	if apiRes.Code == "0000" {
 		log.Println("/cancel name: " + user.UserName + ", id: " + user.UserId + ", key: " + id + ", place: " + place)
 
-		if place == "노사" {
-			apiRes, info := apiHandler.SearchGoodsUse(id, user, getLaptopNo(user.Etc))
+		apiRes, info := apiHandler.SearchGoodsUse(id, user, getLaptopNo(user.Etc))
 
-			if apiRes.Code != "0000" {
-				s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
-				s = append(s, apiRes.Message)
-			} else {
-				if len(*info) == 0 {
-					s = append(s, "신청한 건이 없습니다.")
-				} else {
-					count := 0
-					for _, v := range *info {
-						start, _ := time.Parse("200601021504", v.StartDate)
-						if start.Format("20060102") == time.Now().Format("20060102") && v.Accept == "N" {
-							_ = apiHandler.CancelGoodsUse(id, user, v.GoodsUseNo)
-							count++
-						}
-					}
-					s = append(s, "오늘 신청된 승인되지 않은 "+strconv.Itoa(count)+"건을 취소하였습니다.")
-				}
-			}
-		} else if place == "토학" {
-
+		if apiRes.Code != "0000" {
+			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
+			s = append(s, apiRes.Message)
 		} else {
-			http.Error(w, "Not existing place", 400)
-			return
+			if len(*info) == 0 {
+				s = append(s, "신청한 건이 없습니다.")
+			} else {
+				count := 0
+				for _, v := range *info {
+					start, _ := time.Parse("200601021504", v.StartDate)
+					if start.Format("20060102") == time.Now().Format("20060102") && v.Accept == "N" {
+						_ = apiHandler.CancelGoodsUse(id, user, v.GoodsUseNo)
+						count++
+					}
+				}
+				s = append(s, "오늘 신청된 승인되지 않은 "+strconv.Itoa(count)+"건을 취소하였습니다.")
+			}
 		}
 	} else {
 		res := chatBotResponse{

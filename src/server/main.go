@@ -1,7 +1,7 @@
 package main
 
 import (
-	"../httpHandler"
+	"./httpHandler"
 	"log"
 	"net/http"
 )
