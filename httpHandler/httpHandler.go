@@ -225,7 +225,7 @@ func CancelHandler(w http.ResponseWriter, r *http.Request) {
 	if apiRes.Code == "0000" {
 		log.Println("/cancel name: " + user.UserName + ", id: " + user.UserId + ", key: " + id)
 
-		apiRes, info := apiHandler.SearchGoodsUse(id, user, getLaptopNo(user.Etc))
+		apiRes, info := apiHandler.SearchGoodsUse(id, user, 0)
 
 		if apiRes.Code != "0000" {
 			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
