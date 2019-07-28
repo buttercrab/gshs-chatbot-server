@@ -1,4 +1,4 @@
-package gshs_chatbot_server
+package main
 
 import (
 	"github.com/buttercrab/gshs-chatbot-server/httpHandler"

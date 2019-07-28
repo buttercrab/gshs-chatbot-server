@@ -223,7 +223,7 @@ func CancelHandler(w http.ResponseWriter, r *http.Request) {
 	var s []string
 
 	if apiRes.Code == "0000" {
-		log.Println("/cancel name: " + user.UserName + ", id: " + user.UserId + ", key: " + id + ", place: " + place)
+		log.Println("/cancel name: " + user.UserName + ", id: " + user.UserId + ", key: " + id)
 
 		apiRes, info := apiHandler.SearchGoodsUse(id, user, getLaptopNo(user.Etc))
 
