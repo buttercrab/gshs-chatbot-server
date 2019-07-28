@@ -81,7 +81,7 @@ type button struct {
 	WebLinkUrl string `json:"webLinkUrl"`
 }
 
-func RequestHandler(w http.ResponseWriter, r *http.Request) {
+func LaptopHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid method", 400)
 		return
@@ -99,14 +99,8 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, ok := c.Action.Params["place"]; !ok {
-		http.Error(w, "No `place` param", 400)
-		return
-	}
-
 	id := c.UserRequest.User.Properties.PlusFriendUserKey
 	apiRes, user := apiHandler.GetUserData(id)
-	place := c.Action.Params["place"]
 
 	log.Println(c)
 
@@ -114,52 +108,92 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 
 	if apiRes.Code == "0000" {
 		log.Println("/request name: " + user.UserName + ", id: " + user.UserId + ", key: " + id)
-		if place == "노사" {
-			goodsNo := getLaptopNo(user.Etc)
-			apiRes, info := apiHandler.SearchGoodsUse(id, user, goodsNo)
-			if apiRes.Code != "0000" {
-				s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
-				s = append(s, apiRes.Message)
-			} else {
-				if len(*info) == 0 {
-					start, end := getTime("1차시")
-					apiRes := apiHandler.RequestGoodsUse(id, user, goodsNo, start, end)
-					if apiRes.Code != "0000" {
-						s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
-						s = append(s, apiRes.Message)
-					} else {
-						s = append(s, "오늘 1차시에 노사실 신청을 완료하였습니다.")
-						s = append(s, "승인이 나기 전까지는 취소를 할 수 있습니다.")
-					}
-				} else {
-					s = append(s, "오늘 1차시에 이미 신청이 되어있습니다.")
-				}
-			}
-		} else if place == "토학" {
-			if no, ok := c.Action.Params["no"]; ok {
-				no := getClubNo(no)
-				var t string
-				if val, ok := c.Action.Params["time"]; ok {
-					t = val
-				} else {
-					t = "1차시"
-				}
-				start, end := getTime(t)
-				apiRes := apiHandler.RequestGoodsUse(id, user, no, start, end)
+		goodsNo := getLaptopNo(user.Etc)
+		apiRes, info := apiHandler.SearchGoodsUse(id, user, goodsNo)
+		if apiRes.Code != "0000" {
+			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
+			s = append(s, apiRes.Message)
+		} else {
+			if len(*info) == 0 {
+				start, end := getTime("1차시")
+				apiRes := apiHandler.RequestGoodsUse(id, user, goodsNo, start, end)
 				if apiRes.Code != "0000" {
 					s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
 					s = append(s, apiRes.Message)
 				} else {
-					s = append(s, "오늘 "+t+" 토학실 신청을 완료하였습니다.")
+					s = append(s, "오늘 1차시에 노사실 신청을 완료하였습니다.")
 					s = append(s, "승인이 나기 전까지는 취소를 할 수 있습니다.")
 				}
 			} else {
-
+				s = append(s, "오늘 1차시에 이미 신청이 되어있습니다.")
 			}
-		} else {
-			http.Error(w, "Not existing place", 400)
-			return
 		}
+	} else {
+		res := chatBotResponse{
+			Version: "2.0",
+			Template: skillTemplate{
+				Outputs: []component{
+					{
+						BasicCard: &basicCard{
+							Title:       "로그인이 필요합니다.",
+							Description: "아래 버튼을 눌러 로그인을 해주세요",
+							Buttons: []button{
+								{
+									Label:      "로그인",
+									Action:     "webLink",
+									WebLinkUrl: apiHandler.GetLoginURL(id),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		w.WriteHeader(200)
+		_ = json.NewEncoder(w).Encode(res)
+
+		return
+	}
+
+	res := chatBotResponse{
+		Version: "2.0",
+		Template: skillTemplate{
+			Outputs: toComponent(s),
+		},
+	}
+
+	w.WriteHeader(200)
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+func DebateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Invalid method", 400)
+		return
+	}
+
+	var c chatBotJson
+	if r.Body == nil {
+		http.Error(w, "Please send a body", 400)
+		return
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&c)
+	if err != nil {
+		http.Error(w, "JSON decoding error: "+err.Error(), 400)
+		return
+	}
+
+	id := c.UserRequest.User.Properties.PlusFriendUserKey
+	apiRes, _ := apiHandler.GetUserData(id)
+
+	var s []string
+
+	log.Println(c)
+
+	if apiRes.Code == "0000" {
+		s = append(s, "TEST")
 	} else {
 		res := chatBotResponse{
 			Version: "2.0",

@@ -10,7 +10,7 @@ import (
 func main() {
 	port := os.Getenv("PORT")
 
-	http.HandleFunc("/api/request", httpHandler.RequestHandler)
+	http.HandleFunc("/api/request", httpHandler.LaptopHandler)
 	http.HandleFunc("/api/cancel", httpHandler.CancelHandler)
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
