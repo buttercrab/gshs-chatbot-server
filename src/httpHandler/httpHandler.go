@@ -61,8 +61,8 @@ type skillTemplate struct {
 }
 
 type component struct {
-	SimpleText simpleText `json:"simpleText"`
-	//BasicCard  basicCard  `json:"basicCard"`
+	SimpleText *simpleText `json:"simpleText,omitempty"`
+	BasicCard  *basicCard  `json:"basicCard,omitempty"`
 }
 
 type simpleText struct {
@@ -108,6 +108,8 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 	apiRes, user := apiHandler.GetUserData(id)
 	place := c.Action.Params["place"]
 
+	log.Println(c)
+
 	var s []string
 
 	if apiRes.Code == "0000" {
@@ -120,8 +122,7 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 				s = append(s, apiRes.Message)
 			} else {
 				if len(*info) == 0 {
-					start := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 19, 0, 0, 0, time.UTC)
-					end := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 21, 0, 0, 0, time.UTC)
+					start, end := getTime("1차시")
 					apiRes := apiHandler.RequestGoodsUse(id, user, goodsNo, start, end)
 					if apiRes.Code != "0000" {
 						s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
@@ -135,49 +136,56 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		} else if place == "토학" {
-			//mes, info := getClubStatus(id, user)
-			//if mes != "" {
-			//	s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
-			//	s = append(s, mes)
-			//} else {
-			//	if _, ok := c.Action.Params["no"]; ok {
-			//
-			//	} else {
-			//
-			//	}
-			//}
+			if no, ok := c.Action.Params["no"]; ok {
+				no := getClubNo(no)
+				var t string
+				if val, ok := c.Action.Params["time"]; ok {
+					t = val
+				} else {
+					t = "1차시"
+				}
+				start, end := getTime(t)
+				apiRes := apiHandler.RequestGoodsUse(id, user, no, start, end)
+				if apiRes.Code != "0000" {
+					s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
+					s = append(s, apiRes.Message)
+				} else {
+					s = append(s, "오늘 "+t+" 토학실 신청을 완료하였습니다.")
+					s = append(s, "승인이 나기 전까지는 취소를 할 수 있습니다.")
+				}
+			} else {
+
+			}
 		} else {
 			http.Error(w, "Not existing place", 400)
 			return
 		}
 	} else {
-		//res := chatBotResponse{
-		//	Version: "2.0",
-		//	Template: skillTemplate{
-		//		Outputs: []component{
-		//			{
-		//				BasicCard: basicCard{
-		//					Title: "로그인이 필요합니다.",
-		//					Description: "아래 버튼을 눌러 로그인을 해주세요",
-		//					Buttons: []button{
-		//						{
-		//							Label: "로그인",
-		//							Action: "webLink",
-		//							WebLinkUrl: apiHandler.GetLoginURL(id),
-		//						},
-		//					},
-		//				},
-		//			},
-		//		},
-		//	},
-		//}
-		//
-		//w.WriteHeader(200)
-		//_ = json.NewEncoder(w).Encode(res)
-		//
-		//return
-		s = append(s, "아래 링크를 눌러 로그인을 해주세요. ")
-		s = append(s, apiHandler.GetLoginURL(id))
+		res := chatBotResponse{
+			Version: "2.0",
+			Template: skillTemplate{
+				Outputs: []component{
+					{
+						BasicCard: &basicCard{
+							Title:       "로그인이 필요합니다.",
+							Description: "아래 버튼을 눌러 로그인을 해주세요",
+							Buttons: []button{
+								{
+									Label:      "로그인",
+									Action:     "webLink",
+									WebLinkUrl: apiHandler.GetLoginURL(id),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		w.WriteHeader(200)
+		_ = json.NewEncoder(w).Encode(res)
+
+		return
 	}
 
 	res := chatBotResponse{
@@ -251,8 +259,31 @@ func CancelHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		s = append(s, "로그인이 필요합니다. 아래 링크를 눌러 로그인을 해주세요")
-		s = append(s, apiHandler.GetLoginURL(id))
+		res := chatBotResponse{
+			Version: "2.0",
+			Template: skillTemplate{
+				Outputs: []component{
+					{
+						BasicCard: &basicCard{
+							Title:       "로그인이 필요합니다.",
+							Description: "아래 버튼을 눌러 로그인을 해주세요",
+							Buttons: []button{
+								{
+									Label:      "로그인",
+									Action:     "webLink",
+									WebLinkUrl: apiHandler.GetLoginURL(id),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		w.WriteHeader(200)
+		_ = json.NewEncoder(w).Encode(res)
+
+		return
 	}
 
 	res := chatBotResponse{
@@ -270,7 +301,7 @@ func toComponent(s []string) []component {
 	var comp []component
 	for _, i := range s {
 		comp = append(comp, component{
-			SimpleText: simpleText{
+			SimpleText: &simpleText{
 				Text: i,
 			},
 		})
@@ -279,15 +310,29 @@ func toComponent(s []string) []component {
 }
 
 func getLaptopNo(s string) int {
-	switch s {
-	case "1":
-		return 271
-	case "2":
-		return 272
-	case "3":
-		return 273
+	if t, err := strconv.Atoi(s); 1 <= t && t <= 3 && err == nil {
+		return t + 270
 	}
 	return -1
+}
+
+func getClubNo(s string) int {
+	if t, err := strconv.Atoi(s); 101 <= t && t <= 113 && err == nil {
+		return t + 25
+	}
+	return -1
+}
+
+func getTime(s string) (time.Time, time.Time) {
+	switch s {
+	case "1차시":
+		return time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 19, 0, 0, 0, time.UTC),
+			time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 21, 0, 0, 0, time.UTC)
+	case "2차시":
+		return time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 21, 30, 0, 0, time.UTC),
+			time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 24, 0, 0, 0, time.UTC)
+	}
+	return time.Now(), time.Now()
 }
 
 func getClubStatus(id string, user *apiHandler.UserData) (string, *[][]apiHandler.GoodsInform) {
