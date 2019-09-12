@@ -11,6 +11,7 @@ func main() {
 	port := os.Getenv("PORT")
 
 	http.HandleFunc("/api/laptop", httpHandler.LaptopHandler)
+	http.HandleFunc("/api/debateInform", httpHandler.DebateInformHandler)
 	http.HandleFunc("/api/debate", httpHandler.DebateHandler)
 	http.HandleFunc("/api/cancel", httpHandler.CancelHandler)
 

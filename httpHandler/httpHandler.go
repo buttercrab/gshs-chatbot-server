@@ -102,14 +102,13 @@ func LaptopHandler(w http.ResponseWriter, r *http.Request) {
 	id := c.UserRequest.User.Properties.PlusFriendUserKey
 	apiRes, user := apiHandler.GetUserData(id)
 
-	log.Println(c)
-
 	var s []string
 
 	if apiRes.Code == "0000" {
 		log.Println("/request name: " + user.UserName + ", id: " + user.UserId + ", key: " + id)
 		goodsNo := getLaptopNo(user.Etc)
 		apiRes, info := apiHandler.SearchGoodsUse(id, user, goodsNo)
+
 		if apiRes.Code != "0000" {
 			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
 			s = append(s, apiRes.Message)
@@ -167,6 +166,27 @@ func LaptopHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(res)
 }
 
+func DebateInformHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		http.Error(w, "Invalid method", 400)
+		return
+	}
+
+	var s []string
+
+	s = append(s, "")
+
+	res := chatBotResponse{
+		Version: "2.0",
+		Template: skillTemplate{
+			Outputs: toComponent(s),
+		},
+	}
+
+	w.WriteHeader(200)
+	_ = json.NewEncoder(w).Encode(res)
+}
+
 func DebateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid method", 400)
@@ -186,14 +206,22 @@ func DebateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := c.UserRequest.User.Properties.PlusFriendUserKey
-	apiRes, _ := apiHandler.GetUserData(id)
+	apiRes, user := apiHandler.GetUserData(id)
 
 	var s []string
 
-	log.Println(c)
-
 	if apiRes.Code == "0000" {
-		s = append(s, "TEST")
+		goodsNo := getClubNo(c.Action.Params["location"])
+		start, end := getTime(c.Action.Params["time"])
+		apiRes := apiHandler.RequestGoodsUse(id, user, goodsNo, start, end)
+
+		if apiRes.Code != "0000" {
+			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
+			s = append(s, apiRes.Message)
+		} else {
+			s = append(s, "오늘 1차시에 토학실 신청을 완료하였습니다.")
+			s = append(s, "승인이 나기 전까지는 취소를 할 수 있습니다.")
+		}
 	} else {
 		res := chatBotResponse{
 			Version: "2.0",
