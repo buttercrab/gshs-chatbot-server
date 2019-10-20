@@ -113,7 +113,7 @@ func LaptopHandler(w http.ResponseWriter, r *http.Request) {
 			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
 			s = append(s, apiRes.Message)
 		} else {
-			if len(*info) == 0 {
+			if len(info) == 0 {
 				start, end := getTime("1차시")
 				apiRes := apiHandler.RequestGoodsUse(id, user, goodsNo, start, end)
 				if apiRes.Code != "0000" {
@@ -172,9 +172,61 @@ func DebateInformHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var c chatBotJson
+	if r.Body == nil {
+		http.Error(w, "Please send a body", 400)
+		return
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&c)
+	if err != nil {
+		http.Error(w, "JSON decoding error: "+err.Error(), 400)
+		return
+	}
+
+	id := c.UserRequest.User.Properties.PlusFriendUserKey
+	apiRes, user := apiHandler.GetUserData(id)
+
 	var s []string
 
-	s = append(s, "")
+	if apiRes.Code == "0000" {
+		apiRes, stat := getClubStatus(id, user)
+
+		if apiRes != "" {
+			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
+			s = append(s, apiRes)
+		} else {
+			for _, x := range stat {
+				s = append(s, "")
+			}
+		}
+	} else {
+		res := chatBotResponse{
+			Version: "2.0",
+			Template: skillTemplate{
+				Outputs: []component{
+					{
+						BasicCard: &basicCard{
+							Title:       "로그인이 필요합니다.",
+							Description: "아래 버튼을 눌러 로그인을 해주세요",
+							Buttons: []button{
+								{
+									Label:      "로그인",
+									Action:     "webLink",
+									WebLinkUrl: apiHandler.GetLoginURL(id),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		w.WriteHeader(200)
+		_ = json.NewEncoder(w).Encode(res)
+
+		return
+	}
 
 	res := chatBotResponse{
 		Version: "2.0",
@@ -293,12 +345,12 @@ func CancelHandler(w http.ResponseWriter, r *http.Request) {
 			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
 			s = append(s, apiRes.Message)
 		} else {
-			if len(*info) == 0 {
+			if len(info) == 0 {
 				s = append(s, "신청한 건이 없습니다.")
 			} else {
 				count := 0
 				loc, _ := time.LoadLocation("Asia/Seoul")
-				for _, v := range *info {
+				for _, v := range info {
 					start, _ := time.Parse("200601021504", v.StartDate)
 					if start.Format("20060102") == time.Now().In(loc).Format("20060102") && v.Accept == "N" {
 						_ = apiHandler.CancelGoodsUse(id, user, v.GoodsUseNo)
@@ -387,14 +439,14 @@ func getTime(s string) (time.Time, time.Time) {
 	return now, now
 }
 
-func getClubStatus(id string, user *apiHandler.UserData) (string, *[][]apiHandler.GoodsInform) {
+func getClubStatus(id string, user *apiHandler.UserData) (string, [][]apiHandler.GoodsInform) {
 	var res [][]apiHandler.GoodsInform
 	for i := 126; i <= 138; i++ {
 		apiRes, info := apiHandler.SearchGoodsUse(id, user, i)
 		if apiRes.Code != "0000" {
 			return apiRes.Message, nil
 		}
-		res = append(res, *info)
+		res = append(res, info)
 	}
-	return "", &res
+	return "", res
 }

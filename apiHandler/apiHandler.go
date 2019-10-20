@@ -80,7 +80,7 @@ func ExpireUser(id string, user *UserData) *ApiResponse {
 	return &t
 }
 
-func SearchGoodsUse(id string, user *UserData, goodsNo int) (*ApiResponse, *[]GoodsInform) {
+func SearchGoodsUse(id string, user *UserData, goodsNo int) (*ApiResponse, []GoodsInform) {
 	good := ""
 	if goodsNo >= 0 {
 		good = "&goodsNo=" + strconv.Itoa(goodsNo)
@@ -96,7 +96,7 @@ func SearchGoodsUse(id string, user *UserData, goodsNo int) (*ApiResponse, *[]Go
 	var t ApiSearchRequest
 	_ = json.NewDecoder(res.Body).Decode(&t)
 
-	return &ApiResponse{Code: t.Code, Message: t.Message}, &t.List
+	return &ApiResponse{Code: t.Code, Message: t.Message}, t.List
 }
 
 func RequestGoodsUse(id string, user *UserData, goodsNo int, startDate, endDate time.Time) *ApiResponse {
