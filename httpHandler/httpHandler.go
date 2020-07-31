@@ -1,8 +1,8 @@
 package httpHandler
 
 import (
+	"../apiHandler"
 	"encoding/json"
-	"github.com/buttercrab/gshs-chatbot-server/apiHandler"
 	"log"
 	"net/http"
 	"strconv"
@@ -166,6 +166,7 @@ func LaptopHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(res)
 }
 
+/*
 func DebateInformHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid method", 400)
@@ -196,7 +197,7 @@ func DebateInformHandler(w http.ResponseWriter, r *http.Request) {
 			s = append(s, "오류가 발생했습니다. 다음 오류 메세지를 관리자에게 보여주세요.")
 			s = append(s, apiRes)
 		} else {
-			for _, x := range stat {
+			for range stat {
 				s = append(s, "")
 			}
 		}
@@ -238,7 +239,9 @@ func DebateInformHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	_ = json.NewEncoder(w).Encode(res)
 }
+*/
 
+/*
 func DebateHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Invalid method", 400)
@@ -312,6 +315,7 @@ func DebateHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(200)
 	_ = json.NewEncoder(w).Encode(res)
 }
+*/
 
 func CancelHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
@@ -418,12 +422,14 @@ func getLaptopNo(s string) int {
 	return -1
 }
 
+/*
 func getClubNo(s string) int {
 	if t, err := strconv.Atoi(s); 101 <= t && t <= 113 && err == nil {
 		return t + 25
 	}
 	return -1
 }
+*/
 
 func getTime(s string) (time.Time, time.Time) {
 	loc, _ := time.LoadLocation("Asia/Seoul")
@@ -439,6 +445,7 @@ func getTime(s string) (time.Time, time.Time) {
 	return now, now
 }
 
+/*
 func getClubStatus(id string, user *apiHandler.UserData) (string, [][]apiHandler.GoodsInform) {
 	var res [][]apiHandler.GoodsInform
 	for i := 126; i <= 138; i++ {
@@ -450,3 +457,4 @@ func getClubStatus(id string, user *apiHandler.UserData) (string, [][]apiHandler
 	}
 	return "", res
 }
+*/
