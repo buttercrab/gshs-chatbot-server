@@ -1,7 +1,7 @@
 package main
 
 import (
-	"./httpHandler"
+	"github.com/buttercrab/gshs-chatbot-server/httpHandler"
 	"log"
 	"net/http"
 	"os"

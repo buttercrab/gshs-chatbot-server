@@ -1,8 +1,8 @@
 package httpHandler
 
 import (
-	"../apiHandler"
 	"encoding/json"
+	"github.com/buttercrab/gshs-chatbot-server/apiHandler"
 	"log"
 	"net/http"
 	"strconv"
